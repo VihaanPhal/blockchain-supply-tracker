@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # blockchain-supply-tracker
 
 A lightweight, modular Solidity example that demonstrates a role-protected supply-chain registry. The project uses an ERC-721 token to represent physical products, an on-chain provenance log, and a small controller that wires the pieces together. The code is intended for learning, demos, and as a starting point for a more complete system.
@@ -196,3 +197,6 @@ Contracts include an SPDX header `MIT`. Add a `LICENSE` file in the repo root if
 Open a PR with feature changes or bugfixes. Use the issue tracker to report bugs or request features.
 
 ---
+=======
+# blockchain-supply-tracker
+>>>>>>> 72e4beeb3db0a5205a61ef07d78ef95de30f17a4
