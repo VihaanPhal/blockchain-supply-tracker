@@ -32,6 +32,8 @@ const addresses = {
 
 const expectedChainId = Number(process.env.NEXT_PUBLIC_CHAIN_ID ?? 31337);
 
+const STORAGE_KEY = 'supply-chain-tokens';
+
 // ========== Icons ==========
 const Icons = {
   Cube: () => (
@@ -64,11 +66,6 @@ const Icons = {
       <path d="M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-7 5V8l-7 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/>
     </svg>
   ),
-  Search: () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
-    </svg>
-  ),
   Clock: () => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
       <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
@@ -82,11 +79,6 @@ const Icons = {
   RefreshCw: () => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
       <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>
-    </svg>
-  ),
-  ArrowRight: () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <path d="M5 12h14M12 5l7 7-7 7"/>
     </svg>
   ),
   X: () => (
@@ -107,11 +99,6 @@ const Icons = {
   Info: () => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
       <circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>
-    </svg>
-  ),
-  Zap: () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
     </svg>
   ),
   FileText: () => (
@@ -143,35 +130,125 @@ function Toast({ message, type, onClose }) {
 }
 
 // ========== Status Badge ==========
-function StatusBadge({ status }) {
+function StatusBadge({ status, small }) {
   const s = status?.toLowerCase() || '';
   let cls = styles.badgeCreated;
   if (s.includes('raw')) cls = styles.badgeRaw;
   else if (s.includes('packed')) cls = styles.badgePacked;
   else if (s.includes('transit')) cls = styles.badgeInTransit;
   else if (s.includes('delivered')) cls = styles.badgeDelivered;
-  return <span className={`${styles.badge} ${cls}`}>{status}</span>;
+  return <span className={`${styles.badge} ${cls} ${small ? styles.badgeSmall : ''}`}>{status}</span>;
+}
+
+// ========== New Product Slide Over ==========
+function NewProductSlideOver({ isOpen, onClose, account, onMint, loading }) {
+  const formRef = useRef(null);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const form = formRef.current;
+    const data = new FormData(form);
+    const success = await onMint({
+      to: data.get("to"),
+      cid: data.get("cid"),
+      tokenURI: data.get("tokenURI"),
+      initialStatus: data.get("initialStatus")
+    });
+    if (success) {
+      form.reset();
+      onClose();
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <>
+      <div className={styles.modalOverlay} onClick={onClose} />
+      <div className={styles.slideOver}>
+        <div className={styles.slideOverHeader}>
+          <h2 className={styles.slideOverTitle}>New Product</h2>
+          <button className={styles.slideOverClose} onClick={onClose}>
+            <Icons.X />
+          </button>
+        </div>
+        <form ref={formRef} onSubmit={handleSubmit} className={styles.slideOverContent}>
+          <div className={styles.formGroup}>
+            <label className={styles.label}>Recipient Address</label>
+            <input className={styles.input} name="to" placeholder="0x..." defaultValue={account} required />
+          </div>
+          <div className={styles.formGroup}>
+            <label className={styles.label}>IPFS CID</label>
+            <input className={styles.input} name="cid" placeholder="bafy..." required />
+          </div>
+          <div className={styles.formGroup}>
+            <label className={styles.label}>Token URI</label>
+            <input className={styles.input} name="tokenURI" placeholder="ipfs://..." required />
+          </div>
+          <div className={styles.formGroup}>
+            <label className={styles.label}>Initial Status</label>
+            <select className={styles.select} name="initialStatus" required>
+              <option value="RAW">RAW</option>
+              <option value="PACKED">PACKED</option>
+              <option value="IN_TRANSIT">IN_TRANSIT</option>
+              <option value="DELIVERED">DELIVERED</option>
+            </select>
+          </div>
+          <div className={styles.slideOverFooter} style={{ padding: 0, border: 'none', marginTop: 24 }}>
+            <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`} disabled={loading}>
+              {loading ? <div className={styles.spinner} /> : 'Mint Product NFT'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </>
+  );
 }
 
 // ========== Main Component ==========
 export default function Home() {
   const [account, setAccount] = useState("");
   const [toasts, setToasts] = useState([]);
-  const [productInfo, setProductInfo] = useState(null);
-  const [history, setHistory] = useState([]);
   const [provider, setProvider] = useState(null);
   const [signer, setSigner] = useState(null);
-  const [activeTab, setActiveTab] = useState('register');
   const [loading, setLoading] = useState({});
-  const [currentStatus, setCurrentStatus] = useState('');
 
-  const registerFormRef = useRef(null);
-  const controllerFormRef = useRef(null);
+  // Token management
+  const [tokens, setTokens] = useState([]);
+  const [selectedTokenId, setSelectedTokenId] = useState(null);
+  const [tokenData, setTokenData] = useState(null);
+  const [history, setHistory] = useState([]);
+  const [showNewProduct, setShowNewProduct] = useState(false);
+
   const statusFormRef = useRef(null);
   const eventFormRef = useRef(null);
-  const lookupFormRef = useRef(null);
 
   const ready = useMemo(() => Boolean(signer && addresses.registry), [signer]);
+
+  // Load tokens from localStorage on mount
+  useEffect(() => {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        setTokens(parsed);
+      } catch {}
+    }
+  }, []);
+
+  // Save tokens to localStorage when they change
+  useEffect(() => {
+    if (tokens.length > 0) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(tokens));
+    }
+  }, [tokens]);
+
+  // Fetch token data when selected
+  useEffect(() => {
+    if (selectedTokenId && provider) {
+      fetchTokenData(selectedTokenId);
+    }
+  }, [selectedTokenId, provider]);
 
   const addToast = useCallback((message, type = 'info') => {
     const id = Date.now();
@@ -220,11 +297,6 @@ export default function Home() {
     return new ethers.Contract(addresses.provenance, provenanceAbi, runner);
   };
 
-  const getController = () => {
-    if (!signer) throw new Error("Connect wallet first");
-    return new ethers.Contract(addresses.controller, controllerAbi, signer);
-  };
-
   const getTokenIdFromReceipt = (receipt, contractAddress) => {
     const iface = new ethers.Interface(registryAbi);
     for (const log of receipt.logs) {
@@ -238,49 +310,72 @@ export default function Home() {
     return null;
   };
 
-  const handleRegister = async (e) => {
-    e.preventDefault();
-    const form = registerFormRef.current;
-    const data = new FormData(form);
+  const handleMint = async ({ to, cid, tokenURI, initialStatus }) => {
     try {
-      setLoading(prev => ({ ...prev, register: true }));
+      setLoading(prev => ({ ...prev, mint: true }));
       const registry = getRegistry();
-      const tx = await registry.registerProduct(
-        data.get("to"), data.get("cid"), data.get("tokenURI"), data.get("initialStatus")
-      );
+      const tx = await registry.registerProduct(to, cid, tokenURI, initialStatus);
       addToast("Confirming...", 'info');
       const receipt = await tx.wait();
       const tokenId = getTokenIdFromReceipt(receipt, addresses.registry);
-      addToast(`Minted Token #${tokenId}`, 'success');
-      form.reset();
-      setCurrentStatus(data.get("initialStatus"));
+
+      if (tokenId) {
+        const newToken = {
+          id: tokenId,
+          status: initialStatus,
+          createdAt: Date.now()
+        };
+        setTokens(prev => [newToken, ...prev]);
+        setSelectedTokenId(tokenId);
+        addToast(`Minted Token #${tokenId}`, 'success');
+        return true;
+      }
+      return false;
     } catch (error) {
       addToast(error.shortMessage || error.message, 'error');
+      return false;
     } finally {
-      setLoading(prev => ({ ...prev, register: false }));
+      setLoading(prev => ({ ...prev, mint: false }));
     }
   };
 
-  const handleControllerFlow = async (e) => {
-    e.preventDefault();
-    const form = controllerFormRef.current;
-    const data = new FormData(form);
+  const fetchTokenData = async (tokenId) => {
     try {
-      setLoading(prev => ({ ...prev, controller: true }));
-      const controller = getController();
-      const tx = await controller.registerAndLog(
-        data.get("controllerTo"), data.get("controllerCid"), data.get("controllerUri"), data.get("controllerStatus")
-      );
-      addToast("Confirming...", 'info');
-      const receipt = await tx.wait();
-      const tokenId = getTokenIdFromReceipt(receipt, addresses.registry);
-      addToast(`Minted Token #${tokenId}`, 'success');
-      form.reset();
-      setCurrentStatus(data.get("controllerStatus"));
+      setLoading(prev => ({ ...prev, fetch: true }));
+      const registry = getRegistry(true);
+      const info = await registry.getProductInfo(tokenId);
+      setTokenData({
+        owner: info[0],
+        tokenURI: info[1],
+        cid: info[2],
+        status: info[3]
+      });
+
+      // Update token in list with latest status
+      setTokens(prev => prev.map(t =>
+        t.id === tokenId ? { ...t, status: info[3] } : t
+      ));
+
+      const provenance = getProvenance(true);
+      const count = Number(await provenance.getHistoryCount(tokenId));
+      const events = [];
+      for (let i = 0; i < count; i++) {
+        const entry = await provenance.getHistoryEntry(tokenId, i);
+        events.push({
+          index: i,
+          by: entry[0],
+          action: entry[1],
+          cid: entry[2],
+          timestamp: Number(entry[3])
+        });
+      }
+      setHistory(events);
     } catch (error) {
       addToast(error.shortMessage || error.message, 'error');
+      setTokenData(null);
+      setHistory([]);
     } finally {
-      setLoading(prev => ({ ...prev, controller: false }));
+      setLoading(prev => ({ ...prev, fetch: false }));
     }
   };
 
@@ -291,11 +386,13 @@ export default function Home() {
     try {
       setLoading(prev => ({ ...prev, status: true }));
       const registry = getRegistry();
-      const tx = await registry.updateStatus(data.get("statusTokenId"), data.get("newStatus"));
+      const tx = await registry.updateStatus(selectedTokenId, data.get("newStatus"));
       addToast("Updating...", 'info');
       await tx.wait();
       addToast("Status updated", 'success');
-      setCurrentStatus(data.get("newStatus"));
+
+      // Refresh token data
+      await fetchTokenData(selectedTokenId);
       form.reset();
     } catch (error) {
       addToast(error.shortMessage || error.message, 'error');
@@ -311,10 +408,13 @@ export default function Home() {
     try {
       setLoading(prev => ({ ...prev, event: true }));
       const provenance = getProvenance();
-      const tx = await provenance.addEvent(data.get("eventTokenId"), data.get("action"), data.get("eventCid"));
+      const tx = await provenance.addEvent(selectedTokenId, data.get("action"), data.get("eventCid") || "");
       addToast("Adding event...", 'info');
       await tx.wait();
       addToast("Event recorded", 'success');
+
+      // Refresh token data
+      await fetchTokenData(selectedTokenId);
       form.reset();
     } catch (error) {
       addToast(error.shortMessage || error.message, 'error');
@@ -323,36 +423,8 @@ export default function Home() {
     }
   };
 
-  const handleLookup = async (e) => {
-    e.preventDefault();
-    const tokenId = new FormData(lookupFormRef.current).get("lookupTokenId");
-    try {
-      setLoading(prev => ({ ...prev, lookup: true }));
-      const registry = getRegistry(true);
-      const info = await registry.getProductInfo(tokenId);
-      setProductInfo({ owner: info[0], tokenURI: info[1], cid: info[2], status: info[3] });
-      setCurrentStatus(info[3]);
-
-      const provenance = getProvenance(true);
-      const count = Number(await provenance.getHistoryCount(tokenId));
-      const events = [];
-      for (let i = 0; i < count; i++) {
-        const entry = await provenance.getHistoryEntry(tokenId, i);
-        events.push({ index: i, by: entry[0], action: entry[1], cid: entry[2], timestamp: Number(entry[3]) });
-      }
-      setHistory(events);
-      addToast(`Found ${count} events`, 'success');
-    } catch (error) {
-      addToast(error.shortMessage || error.message, 'error');
-      setProductInfo(null);
-      setHistory([]);
-    } finally {
-      setLoading(prev => ({ ...prev, lookup: false }));
-    }
-  };
-
-  const getStatusStep = () => {
-    const s = currentStatus?.toLowerCase() || '';
+  const getStatusStep = (status) => {
+    const s = status?.toLowerCase() || '';
     if (s.includes('delivered')) return 4;
     if (s.includes('transit')) return 3;
     if (s.includes('packed')) return 2;
@@ -360,280 +432,276 @@ export default function Home() {
     return 0;
   };
 
+  const currentStep = tokenData ? getStatusStep(tokenData.status) : 0;
+
   return (
-    <div className={styles.page}>
-      <div className={styles.statusContainer}>
+    <div className={styles.dashboard}>
+      {/* Toast Container */}
+      <div className={styles.toastContainer}>
         {toasts.map(t => (
           <Toast key={t.id} message={t.message} type={t.type} onClose={() => removeToast(t.id)} />
         ))}
       </div>
 
-      <main className={styles.main}>
-        <header className={styles.header}>
+      {/* Sidebar */}
+      <aside className={styles.sidebar}>
+        <div className={styles.sidebarHeader}>
           <div className={styles.logo}>
             <Icons.Cube />
-            <span>Supply Chain</span>
+            <span>Supply Chain Tracker</span>
           </div>
+          <button
+            className={styles.newProductBtn}
+            onClick={() => setShowNewProduct(true)}
+            disabled={!ready}
+          >
+            <Icons.Plus />
+            New Product
+          </button>
+        </div>
+
+        <div className={styles.sidebarContent}>
+          <div className={styles.sidebarSection}>
+            <div className={styles.sidebarLabel}>Products</div>
+            <div className={styles.tokenList}>
+              {tokens.length === 0 ? (
+                <div style={{ padding: '12px', color: 'var(--text-muted)', fontSize: '13px' }}>
+                  No products yet
+                </div>
+              ) : (
+                tokens.map(token => (
+                  <div
+                    key={token.id}
+                    className={`${styles.tokenItem} ${selectedTokenId === token.id ? styles.active : ''}`}
+                    onClick={() => setSelectedTokenId(token.id)}
+                  >
+                    <span className={styles.tokenId}>Token #{token.id}</span>
+                    <span className={styles.tokenMeta}>
+                      <StatusBadge status={token.status} small />
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className={styles.sidebarFooter}>
           <button
             className={`${styles.walletBtn} ${account ? styles.connected : ''}`}
             onClick={connectWallet}
             disabled={loading.wallet}
           >
             {loading.wallet ? <div className={styles.spinner} /> : <Icons.Wallet />}
-            {account ? `${account.slice(0, 6)}...${account.slice(-4)}` : "Connect"}
-          </button>
-        </header>
-
-        <section className={styles.hero}>
-          <h1>Supply Chain Tracker</h1>
-          <p>Track products on the blockchain with immutable provenance records</p>
-        </section>
-
-        <div className={styles.supplyChainFlow}>
-          <div className={`${styles.flowStep} ${getStatusStep() >= 1 ? styles.active : ''}`}>
-            <div className={styles.flowIcon}><Icons.Factory /></div>
-            <span className={styles.flowLabel}>Raw</span>
-          </div>
-          <span className={styles.flowArrow}><Icons.ArrowRight /></span>
-          <div className={`${styles.flowStep} ${getStatusStep() >= 2 ? styles.activeBlue : ''}`}>
-            <div className={styles.flowIcon}><Icons.Package /></div>
-            <span className={styles.flowLabel}>Packed</span>
-          </div>
-          <span className={styles.flowArrow}><Icons.ArrowRight /></span>
-          <div className={`${styles.flowStep} ${getStatusStep() >= 3 ? styles.activeAmber : ''}`}>
-            <div className={styles.flowIcon}><Icons.Truck /></div>
-            <span className={styles.flowLabel}>Transit</span>
-          </div>
-          <span className={styles.flowArrow}><Icons.ArrowRight /></span>
-          <div className={`${styles.flowStep} ${getStatusStep() >= 4 ? styles.activeGreen : ''}`}>
-            <div className={styles.flowIcon}><Icons.Check /></div>
-            <span className={styles.flowLabel}>Delivered</span>
-          </div>
-        </div>
-
-        <div className={styles.tabs}>
-          <button className={`${styles.tab} ${activeTab === 'register' ? styles.active : ''}`} onClick={() => setActiveTab('register')}>
-            <Icons.Plus /> Register
-          </button>
-          <button className={`${styles.tab} ${activeTab === 'track' ? styles.active : ''}`} onClick={() => setActiveTab('track')}>
-            <Icons.RefreshCw /> Update
-          </button>
-          <button className={`${styles.tab} ${activeTab === 'lookup' ? styles.active : ''}`} onClick={() => setActiveTab('lookup')}>
-            <Icons.Search /> Lookup
+            {account ? (
+              <span className={styles.walletAddress}>
+                {account.slice(0, 6)}...{account.slice(-4)}
+              </span>
+            ) : (
+              "Connect Wallet"
+            )}
           </button>
         </div>
+      </aside>
 
-        <div className={styles.tabContent}>
-          {activeTab === 'register' && (
-            <section className={styles.grid}>
-              <form ref={registerFormRef} className={styles.card} onSubmit={handleRegister}>
-                <div className={styles.cardHeader}>
-                  <div className={styles.cardIcon}><Icons.Package /></div>
-                  <div>
-                    <h2 className={styles.cardTitle}>Register Product</h2>
-                    <p className={styles.cardDesc}>Mint a new product NFT</p>
-                  </div>
-                </div>
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>Recipient</label>
-                  <input className={styles.input} name="to" placeholder="0x..." defaultValue={account} required />
-                </div>
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>IPFS CID</label>
-                  <input className={styles.input} name="cid" placeholder="bafy..." required />
-                </div>
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>Token URI</label>
-                  <input className={styles.input} name="tokenURI" placeholder="ipfs://..." required />
-                </div>
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>Initial Status</label>
-                  <select className={styles.select} name="initialStatus" required>
-                    <option value="RAW">RAW</option>
-                    <option value="PACKED">PACKED</option>
-                    <option value="IN_TRANSIT">IN_TRANSIT</option>
-                    <option value="DELIVERED">DELIVERED</option>
-                  </select>
-                </div>
-                <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`} disabled={!ready || loading.register}>
-                  {loading.register ? <div className={styles.spinner} /> : 'Mint NFT'}
-                </button>
-              </form>
+      {/* Main Content */}
+      <main className={styles.main}>
+        <div className={styles.mainHeader}>
+          <h1 className={styles.mainTitle}>
+            {selectedTokenId ? `Token #${selectedTokenId}` : 'Dashboard'}
+          </h1>
+        </div>
 
-              <form ref={controllerFormRef} className={styles.card} onSubmit={handleControllerFlow}>
-                <div className={styles.cardHeader}>
-                  <div className={styles.cardIcon}><Icons.Zap /></div>
-                  <div>
-                    <h2 className={styles.cardTitle}>Quick Register</h2>
-                    <p className={styles.cardDesc}>Mint + log provenance</p>
-                  </div>
-                </div>
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>Recipient</label>
-                  <input className={styles.input} name="controllerTo" placeholder="0x..." defaultValue={account} required />
-                </div>
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>IPFS CID</label>
-                  <input className={styles.input} name="controllerCid" placeholder="bafy..." required />
-                </div>
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>Token URI</label>
-                  <input className={styles.input} name="controllerUri" placeholder="ipfs://..." required />
-                </div>
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>Initial Status</label>
-                  <select className={styles.select} name="controllerStatus" required>
-                    <option value="CREATED">CREATED</option>
-                    <option value="RAW">RAW</option>
-                    <option value="PACKED">PACKED</option>
-                  </select>
-                </div>
-                <button type="submit" className={`${styles.btn} ${styles.btnSecondary}`} disabled={!ready || loading.controller}>
-                  {loading.controller ? <div className={styles.spinner} /> : 'Quick Register'}
-                </button>
-              </form>
-            </section>
-          )}
-
-          {activeTab === 'track' && (
-            <section className={styles.grid}>
-              <form ref={statusFormRef} className={styles.card} onSubmit={handleUpdateStatus}>
-                <div className={styles.cardHeader}>
-                  <div className={styles.cardIcon}><Icons.RefreshCw /></div>
-                  <div>
-                    <h2 className={styles.cardTitle}>Update Status</h2>
-                    <p className={styles.cardDesc}>Change product status</p>
-                  </div>
-                </div>
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>Token ID</label>
-                  <input className={styles.input} name="statusTokenId" type="number" min="1" placeholder="1" required />
-                </div>
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>New Status</label>
-                  <select className={styles.select} name="newStatus" required>
-                    <option value="RAW">RAW</option>
-                    <option value="PACKED">PACKED</option>
-                    <option value="IN_TRANSIT">IN_TRANSIT</option>
-                    <option value="DELIVERED">DELIVERED</option>
-                  </select>
-                </div>
-                <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`} disabled={!ready || loading.status}>
-                  {loading.status ? <div className={styles.spinner} /> : 'Update'}
-                </button>
-              </form>
-
-              <form ref={eventFormRef} className={styles.card} onSubmit={handleAddEvent}>
-                <div className={styles.cardHeader}>
-                  <div className={styles.cardIcon}><Icons.FileText /></div>
-                  <div>
-                    <h2 className={styles.cardTitle}>Add Event</h2>
-                    <p className={styles.cardDesc}>Record to audit trail</p>
-                  </div>
-                </div>
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>Token ID</label>
-                  <input className={styles.input} name="eventTokenId" type="number" min="1" placeholder="1" required />
-                </div>
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>Action</label>
-                  <select className={styles.select} name="action" required>
-                    <option value="INSPECTED">INSPECTED</option>
-                    <option value="SHIPPED">SHIPPED</option>
-                    <option value="RECEIVED">RECEIVED</option>
-                    <option value="STORED">STORED</option>
-                    <option value="CERTIFIED">CERTIFIED</option>
-                  </select>
-                </div>
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>IPFS CID (optional)</label>
-                  <input className={styles.input} name="eventCid" placeholder="bafy..." />
-                </div>
-                <button type="submit" className={`${styles.btn} ${styles.btnSecondary}`} disabled={!ready || loading.event}>
-                  {loading.event ? <div className={styles.spinner} /> : 'Add Event'}
-                </button>
-              </form>
-            </section>
-          )}
-
-          {activeTab === 'lookup' && (
-            <section className={styles.grid}>
-              <form ref={lookupFormRef} className={styles.card} onSubmit={handleLookup}>
-                <div className={styles.cardHeader}>
-                  <div className={styles.cardIcon}><Icons.Search /></div>
-                  <div>
-                    <h2 className={styles.cardTitle}>Lookup Product</h2>
-                    <p className={styles.cardDesc}>View details and history</p>
-                  </div>
-                </div>
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>Token ID</label>
-                  <input className={styles.input} name="lookupTokenId" type="number" min="1" placeholder="1" required />
-                </div>
-                <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`} disabled={!provider || loading.lookup}>
-                  {loading.lookup ? <div className={styles.spinner} /> : 'Fetch'}
-                </button>
-
-                {productInfo && (
-                  <div className={styles.productInfo}>
-                    <div className={styles.productInfoRow}>
-                      <span className={styles.productInfoLabel}>Status</span>
-                      <StatusBadge status={productInfo.status} />
+        <div className={styles.mainContent}>
+          {!selectedTokenId ? (
+            <div className={styles.emptyState}>
+              <div className={styles.emptyIcon}>
+                <Icons.Package />
+              </div>
+              <h2 className={styles.emptyTitle}>No product selected</h2>
+              <p className={styles.emptyDesc}>Select a product from the sidebar or create a new one</p>
+              <button
+                className={styles.emptyBtn}
+                onClick={() => setShowNewProduct(true)}
+                disabled={!ready}
+              >
+                <Icons.Plus />
+                New Product
+              </button>
+            </div>
+          ) : loading.fetch && !tokenData ? (
+            <div className={styles.emptyState}>
+              <div className={styles.spinner} style={{ width: 24, height: 24 }} />
+            </div>
+          ) : tokenData ? (
+            <div className={styles.tokenDetail}>
+              {/* Token Header */}
+              <div className={styles.tokenHeader}>
+                <div className={styles.tokenHeaderInfo}>
+                  <h2 className={styles.tokenHeaderId}>
+                    Token #{selectedTokenId}
+                    <StatusBadge status={tokenData.status} />
+                  </h2>
+                  <div className={styles.tokenHeaderMeta}>
+                    <div className={styles.tokenMetaItem}>
+                      <span className={styles.tokenMetaLabel}>Owner</span>
+                      <span className={`${styles.tokenMetaValue} ${styles.mono}`}>
+                        {tokenData.owner.slice(0, 10)}...{tokenData.owner.slice(-8)}
+                      </span>
                     </div>
-                    <div className={styles.productInfoRow}>
-                      <span className={styles.productInfoLabel}>Owner</span>
-                      <span className={`${styles.productInfoValue} ${styles.mono}`}>{productInfo.owner}</span>
-                    </div>
-                    <div className={styles.productInfoRow}>
-                      <span className={styles.productInfoLabel}>Token URI</span>
-                      <span className={styles.productInfoValue}>{productInfo.tokenURI}</span>
-                    </div>
-                    <div className={styles.productInfoRow}>
-                      <span className={styles.productInfoLabel}>IPFS CID</span>
-                      <span className={styles.productInfoValue}>{productInfo.cid}</span>
+                    <div className={styles.tokenMetaItem}>
+                      <span className={styles.tokenMetaLabel}>IPFS CID</span>
+                      <span className={styles.tokenMetaValue}>
+                        {tokenData.cid.slice(0, 16)}...
+                      </span>
                     </div>
                   </div>
-                )}
-              </form>
+                </div>
+              </div>
 
-              <div className={styles.card}>
-                <div className={styles.cardHeader}>
-                  <div className={styles.cardIcon}><Icons.Clock /></div>
-                  <div>
-                    <h2 className={styles.cardTitle}>History</h2>
-                    <p className={styles.cardDesc}>Provenance timeline</p>
+              {/* Progress Track */}
+              <div className={styles.progressSection}>
+                <h3 className={styles.sectionTitle}>Supply Chain Progress</h3>
+                <div className={styles.progressTrack}>
+                  <div className={`${styles.progressStep} ${currentStep >= 1 ? styles.completed : ''} ${currentStep === 1 ? styles.current : ''}`}>
+                    <div className={styles.progressIcon}><Icons.Factory /></div>
+                    <span className={styles.progressLabel}>Raw</span>
+                  </div>
+                  <div className={`${styles.progressLine} ${currentStep >= 2 ? styles.completed : ''}`} />
+                  <div className={`${styles.progressStep} ${currentStep >= 2 ? styles.completed : ''} ${currentStep === 2 ? styles.current : ''}`}>
+                    <div className={styles.progressIcon}><Icons.Package /></div>
+                    <span className={styles.progressLabel}>Packed</span>
+                  </div>
+                  <div className={`${styles.progressLine} ${currentStep >= 3 ? styles.completed : ''}`} />
+                  <div className={`${styles.progressStep} ${currentStep >= 3 ? styles.completed : ''} ${currentStep === 3 ? styles.current : ''}`}>
+                    <div className={styles.progressIcon}><Icons.Truck /></div>
+                    <span className={styles.progressLabel}>In Transit</span>
+                  </div>
+                  <div className={`${styles.progressLine} ${currentStep >= 4 ? styles.completed : ''}`} />
+                  <div className={`${styles.progressStep} ${currentStep >= 4 ? styles.completed : ''} ${currentStep === 4 ? styles.current : ''}`}>
+                    <div className={styles.progressIcon}><Icons.Check /></div>
+                    <span className={styles.progressLabel}>Delivered</span>
                   </div>
                 </div>
+              </div>
 
-                {history.length > 0 ? (
-                  <div className={styles.timeline}>
-                    {history.map((entry) => (
-                      <div key={`${entry.index}-${entry.timestamp}`} className={styles.timelineItem}>
-                        <div className={styles.timelineDot} />
-                        <div className={styles.timelineContent}>
-                          <div className={styles.timelineAction}>{entry.action}</div>
-                          <div className={styles.timelineDate}>
-                            {new Date(entry.timestamp * 1000).toLocaleString()}
-                          </div>
-                          <div className={styles.timelineMeta}>
-                            {entry.by.slice(0, 10)}...{entry.by.slice(-8)}
-                            {entry.cid && ` · ${entry.cid.slice(0, 12)}...`}
+              {/* Actions Grid */}
+              <div className={styles.contentGrid}>
+                {/* Update Status Card */}
+                <form ref={statusFormRef} className={styles.card} onSubmit={handleUpdateStatus}>
+                  <div className={styles.cardHeader}>
+                    <div className={styles.cardIcon}><Icons.RefreshCw /></div>
+                    <div>
+                      <h3 className={styles.cardTitle}>Update Status</h3>
+                      <p className={styles.cardDesc}>Change product status</p>
+                    </div>
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>Token ID</label>
+                    <input
+                      className={styles.input}
+                      value={selectedTokenId}
+                      disabled
+                    />
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>New Status</label>
+                    <select className={styles.select} name="newStatus" required>
+                      <option value="RAW">RAW</option>
+                      <option value="PACKED">PACKED</option>
+                      <option value="IN_TRANSIT">IN_TRANSIT</option>
+                      <option value="DELIVERED">DELIVERED</option>
+                    </select>
+                  </div>
+                  <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`} disabled={!ready || loading.status}>
+                    {loading.status ? <div className={styles.spinner} /> : 'Update Status'}
+                  </button>
+                </form>
+
+                {/* Add Event Card */}
+                <form ref={eventFormRef} className={styles.card} onSubmit={handleAddEvent}>
+                  <div className={styles.cardHeader}>
+                    <div className={styles.cardIcon}><Icons.FileText /></div>
+                    <div>
+                      <h3 className={styles.cardTitle}>Add Event</h3>
+                      <p className={styles.cardDesc}>Record to audit trail</p>
+                    </div>
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>Token ID</label>
+                    <input
+                      className={styles.input}
+                      value={selectedTokenId}
+                      disabled
+                    />
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>Action</label>
+                    <select className={styles.select} name="action" required>
+                      <option value="INSPECTED">INSPECTED</option>
+                      <option value="SHIPPED">SHIPPED</option>
+                      <option value="RECEIVED">RECEIVED</option>
+                      <option value="STORED">STORED</option>
+                      <option value="CERTIFIED">CERTIFIED</option>
+                    </select>
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>IPFS CID (optional)</label>
+                    <input className={styles.input} name="eventCid" placeholder="bafy..." />
+                  </div>
+                  <button type="submit" className={`${styles.btn} ${styles.btnSecondary}`} disabled={!ready || loading.event}>
+                    {loading.event ? <div className={styles.spinner} /> : 'Add Event'}
+                  </button>
+                </form>
+
+                {/* History Card */}
+                <div className={styles.card} style={{ gridColumn: 'span 2' }}>
+                  <div className={styles.cardHeader}>
+                    <div className={styles.cardIcon}><Icons.Clock /></div>
+                    <div>
+                      <h3 className={styles.cardTitle}>Provenance History</h3>
+                      <p className={styles.cardDesc}>Immutable audit trail</p>
+                    </div>
+                  </div>
+
+                  {history.length > 0 ? (
+                    <div className={styles.timeline}>
+                      {history.map((entry) => (
+                        <div key={`${entry.index}-${entry.timestamp}`} className={styles.timelineItem}>
+                          <div className={styles.timelineDot} />
+                          <div className={styles.timelineContent}>
+                            <div className={styles.timelineAction}>{entry.action}</div>
+                            <div className={styles.timelineDate}>
+                              {new Date(entry.timestamp * 1000).toLocaleString()}
+                            </div>
+                            <div className={styles.timelineMeta}>
+                              {entry.by.slice(0, 10)}...{entry.by.slice(-8)}
+                              {entry.cid && ` · ${entry.cid.slice(0, 12)}...`}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className={styles.emptyState}>
-                    <Icons.Clock />
-                    <p>No history yet</p>
-                  </div>
-                )}
+                      ))}
+                    </div>
+                  ) : (
+                    <div className={styles.timelineEmpty}>
+                      No events recorded yet
+                    </div>
+                  )}
+                </div>
               </div>
-            </section>
-          )}
+            </div>
+          ) : null}
         </div>
       </main>
+
+      {/* New Product Slide Over */}
+      <NewProductSlideOver
+        isOpen={showNewProduct}
+        onClose={() => setShowNewProduct(false)}
+        account={account}
+        onMint={handleMint}
+        loading={loading.mint}
+      />
     </div>
   );
 }

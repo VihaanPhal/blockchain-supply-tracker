@@ -1,32 +1,31 @@
-/* ========== Layout ========== */
-.page {
+/* ========== Dashboard Layout ========== */
+.dashboard {
+  display: flex;
   min-height: 100vh;
   background: var(--bg-000);
 }
 
-.main {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 24px 64px;
+/* ========== Sidebar ========== */
+.sidebar {
+  width: 260px;
+  border-right: 1px solid var(--border-default);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
 }
 
-/* ========== Header ========== */
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 0;
+.sidebarHeader {
+  padding: 16px;
   border-bottom: 1px solid var(--border-default);
-  margin-bottom: 48px;
 }
 
 .logo {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-primary);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 .logo svg {
@@ -34,14 +33,102 @@
   height: 20px;
 }
 
+.newProductBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 16px;
+  padding: 10px 16px;
+  background: var(--text-primary);
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--bg-000);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.newProductBtn:hover {
+  background: var(--text-secondary);
+}
+
+.newProductBtn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.sidebarContent {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.sidebarSection {
+  margin-bottom: 8px;
+}
+
+.sidebarLabel {
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+}
+
+.tokenList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tokenItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+}
+
+.tokenItem:hover {
+  background: var(--bg-100);
+}
+
+.tokenItem.active {
+  background: var(--bg-100);
+  border-color: var(--border-default);
+}
+
+.tokenId {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.tokenMeta {
+  margin-left: auto;
+}
+
+.sidebarFooter {
+  padding: 16px;
+  border-top: 1px solid var(--border-default);
+}
+
 .walletBtn {
   display: flex;
   align-items: center;
   gap: 8px;
+  width: 100%;
   background: transparent;
   border: 1px solid var(--border-default);
   color: var(--text-secondary);
-  padding: 8px 16px;
+  padding: 10px 12px;
   border-radius: var(--radius-md);
   cursor: pointer;
   font-size: 13px;
@@ -57,13 +144,8 @@
 
 .walletBtn.connected {
   color: var(--accent-green);
-  border-color: rgba(34, 197, 94, 0.5);
-  background: rgba(34, 197, 94, 0.1);
-}
-
-.walletBtn.connected:hover {
-  border-color: var(--accent-green);
-  background: rgba(34, 197, 94, 0.15);
+  border-color: rgba(34, 197, 94, 0.4);
+  background: rgba(34, 197, 94, 0.08);
 }
 
 .walletBtn svg {
@@ -71,112 +153,139 @@
   height: 16px;
 }
 
-/* ========== Hero ========== */
-.hero {
-  text-align: center;
-  padding: 32px 0 48px;
+.walletAddress {
+  font-family: 'SF Mono', Monaco, monospace;
+  font-size: 12px;
 }
 
-.hero h1 {
-  font-size: 32px;
+/* ========== Main Content ========== */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.mainHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border-default);
+  min-height: 57px;
+}
+
+.mainTitle {
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
-  margin-bottom: 8px;
-  letter-spacing: -0.5px;
 }
 
-.hero p {
-  color: var(--text-secondary);
-  font-size: 15px;
-  max-width: 480px;
-  margin: 0 auto;
+.mainContent {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
 }
 
-/* ========== Supply Chain Flow ========== */
-.supplyChainFlow {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 4px;
-  padding: 24px 0 40px;
-}
-
-.flowStep {
+/* ========== Empty State ========== */
+.emptyState {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  height: 100%;
+  min-height: 400px;
+  text-align: center;
+  color: var(--text-muted);
 }
 
-.flowIcon {
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-md);
-  background: var(--bg-100);
-  border: 1px solid var(--border-default);
+.emptyIcon {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 16px;
+  opacity: 0.4;
+}
+
+.emptyTitle {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.emptyDesc {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 20px;
+}
+
+.emptyBtn {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: var(--text-primary);
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--bg-000);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
   transition: all 0.15s ease;
 }
 
-.flowIcon svg {
-  width: 18px;
-  height: 18px;
-  color: var(--text-muted);
-  transition: color 0.15s ease;
+.emptyBtn:hover {
+  background: var(--text-secondary);
 }
 
-.flowStep.active .flowIcon {
-  border-color: var(--text-primary);
-  background: var(--bg-200);
+.emptyBtn svg {
+  width: 16px;
+  height: 16px;
 }
 
-.flowStep.active .flowIcon svg {
+/* ========== Token Detail View ========== */
+.tokenDetail {
+  animation: fadeIn 0.2s ease;
+}
+
+.tokenHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 32px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--border-default);
+}
+
+.tokenHeaderInfo {
+  flex: 1;
+}
+
+.tokenHeaderId {
+  font-size: 24px;
+  font-weight: 600;
   color: var(--text-primary);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-/* Colored flow states */
-.flowStep.activeBlue .flowIcon {
-  border-color: rgba(59, 130, 246, 0.6);
-  background: rgba(59, 130, 246, 0.1);
+.tokenHeaderMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  font-size: 13px;
+  color: var(--text-secondary);
 }
 
-.flowStep.activeBlue .flowIcon svg {
-  color: var(--accent-blue);
+.tokenMetaItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.flowStep.activeBlue .flowLabel {
-  color: var(--accent-blue);
-}
-
-.flowStep.activeAmber .flowIcon {
-  border-color: rgba(234, 179, 8, 0.6);
-  background: rgba(234, 179, 8, 0.1);
-}
-
-.flowStep.activeAmber .flowIcon svg {
-  color: var(--accent-yellow);
-}
-
-.flowStep.activeAmber .flowLabel {
-  color: var(--accent-yellow);
-}
-
-.flowStep.activeGreen .flowIcon {
-  border-color: rgba(34, 197, 94, 0.6);
-  background: rgba(34, 197, 94, 0.1);
-}
-
-.flowStep.activeGreen .flowIcon svg {
-  color: var(--accent-green);
-}
-
-.flowStep.activeGreen .flowLabel {
-  color: var(--accent-green);
-}
-
-.flowLabel {
+.tokenMetaLabel {
   font-size: 11px;
   font-weight: 500;
   text-transform: uppercase;
@@ -184,149 +293,182 @@
   color: var(--text-muted);
 }
 
-.flowStep.active .flowLabel {
+.tokenMetaValue {
   color: var(--text-primary);
 }
 
-.flowArrow {
-  color: var(--text-muted);
-  padding: 0 8px;
+.tokenMetaValue.mono {
+  font-family: 'SF Mono', Monaco, monospace;
+  font-size: 12px;
 }
 
-.flowArrow svg {
-  width: 16px;
-  height: 16px;
-}
-
-/* ========== Tabs ========== */
-.tabs {
-  display: flex;
-  justify-content: center;
-  gap: 4px;
+/* ========== Supply Chain Progress ========== */
+.progressSection {
   margin-bottom: 32px;
-  border-bottom: 1px solid var(--border-default);
-  padding-bottom: 0;
 }
 
-.tab {
+.sectionTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.progressTrack {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 12px 16px;
-  background: transparent;
-  border: none;
-  color: var(--text-tertiary);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: color 0.15s ease;
+  gap: 0;
+  padding: 20px;
+  background: var(--bg-050);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+}
+
+.progressStep {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
   position: relative;
 }
 
-.tab:hover {
-  color: var(--text-secondary);
+.progressIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--bg-200);
+  border: 2px solid var(--border-default);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  transition: all 0.2s ease;
 }
 
-.tab.active {
+.progressIcon svg {
+  width: 18px;
+  height: 18px;
+  color: var(--text-muted);
+}
+
+.progressStep.completed .progressIcon {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: var(--accent-green);
+}
+
+.progressStep.completed .progressIcon svg {
+  color: var(--accent-green);
+}
+
+.progressStep.current .progressIcon {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: var(--accent-blue);
+}
+
+.progressStep.current .progressIcon svg {
+  color: var(--accent-blue);
+}
+
+.progressLabel {
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+}
+
+.progressStep.completed .progressLabel,
+.progressStep.current .progressLabel {
   color: var(--text-primary);
 }
 
-.tab.active::after {
-  content: '';
-  position: absolute;
-  bottom: -1px;
-  left: 0;
-  right: 0;
+.progressLine {
+  flex: 1;
   height: 2px;
-  background: var(--accent-blue);
-  border-radius: 1px;
+  background: var(--border-default);
+  margin: 0 -20px;
+  margin-top: -24px;
 }
 
-.tab svg {
-  width: 16px;
-  height: 16px;
+.progressLine.completed {
+  background: var(--accent-green);
 }
 
-/* ========== Tab Content ========== */
-.tabContent {
-  animation: fadeIn 0.2s ease;
-}
-
-/* ========== Grid ========== */
-.grid {
+/* ========== Content Grid ========== */
+.contentGrid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: 1fr 1fr;
   gap: 24px;
 }
 
-@media (max-width: 768px) {
-  .grid {
+@media (max-width: 1024px) {
+  .contentGrid {
     grid-template-columns: 1fr;
   }
 }
 
-/* ========== Card ========== */
+/* ========== Cards ========== */
 .card {
   background: var(--bg-050);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+  padding: 20px;
 }
 
 .cardHeader {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-default);
 }
 
 .cardIcon {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-md);
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
   background: var(--bg-200);
-  border: 1px solid var(--border-default);
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
 }
 
 .cardIcon svg {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   color: var(--text-secondary);
 }
 
 .cardTitle {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-primary);
-  margin: 0;
 }
 
 .cardDesc {
-  font-size: 13px;
-  color: var(--text-tertiary);
-  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
-/* ========== Form Elements ========== */
+/* ========== Forms ========== */
 .formGroup {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  margin-bottom: 16px;
 }
 
 .label {
-  font-size: 13px;
+  display: block;
+  font-size: 12px;
   font-weight: 500;
   color: var(--text-secondary);
+  margin-bottom: 6px;
 }
 
 .input {
+  width: 100%;
   padding: 10px 12px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-default);
@@ -341,11 +483,17 @@
   border-color: var(--border-active);
 }
 
+.input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .input::placeholder {
   color: var(--text-muted);
 }
 
 .select {
+  width: 100%;
   padding: 10px 12px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-default);
@@ -353,7 +501,6 @@
   color: var(--text-primary);
   font-size: 13px;
   cursor: pointer;
-  transition: border-color 0.15s ease;
   appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23525252'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
   background-repeat: no-repeat;
@@ -367,17 +514,12 @@
   border-color: var(--border-active);
 }
 
-.select option {
-  background: var(--bg-100);
-  color: var(--text-primary);
-}
-
-/* ========== Buttons ========== */
 .btn {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
+  width: 100%;
   padding: 10px 16px;
   border-radius: var(--radius-md);
   font-size: 13px;
@@ -418,18 +560,65 @@
   height: 16px;
 }
 
-/* ========== Spinner ========== */
-.spinner {
-  width: 14px;
-  height: 14px;
-  border: 1.5px solid transparent;
-  border-top-color: currentColor;
-  border-radius: 50%;
-  animation: spin 0.6s linear infinite;
+/* ========== Timeline ========== */
+.timeline {
+  display: flex;
+  flex-direction: column;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
+.timelineItem {
+  display: flex;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-default);
+}
+
+.timelineItem:last-child {
+  border-bottom: none;
+}
+
+.timelineDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  margin-top: 5px;
+  flex-shrink: 0;
+}
+
+.timelineItem:first-child .timelineDot {
+  background: var(--accent-green);
+}
+
+.timelineContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.timelineAction {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.timelineDate {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-bottom: 4px;
+}
+
+.timelineMeta {
+  font-family: 'SF Mono', Monaco, monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.timelineEmpty {
+  text-align: center;
+  padding: 24px;
+  color: var(--text-muted);
+  font-size: 13px;
 }
 
 /* ========== Status Badges ========== */
@@ -475,123 +664,85 @@
   background: var(--bg-200);
 }
 
-/* ========== Product Info ========== */
-.productInfo {
-  border-top: 1px solid var(--border-default);
-  padding-top: 20px;
+.badgeSmall {
+  padding: 2px 8px;
+  font-size: 10px;
+}
+
+/* ========== Modal / Slide Over ========== */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 100;
+  animation: fadeIn 0.15s ease;
+}
+
+.slideOver {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 400px;
+  max-width: 100%;
+  background: var(--bg-050);
+  border-left: 1px solid var(--border-default);
+  z-index: 101;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  animation: slideUp 0.2s ease;
+  animation: slideIn 0.2s ease;
 }
 
-.productInfoRow {
+@keyframes slideIn {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.slideOverHeader {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.productInfoLabel {
-  font-size: 11px;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--text-muted);
-}
-
-.productInfoValue {
-  font-size: 13px;
-  color: var(--text-primary);
-  word-break: break-all;
-}
-
-.productInfoValue.mono {
-  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Courier New', monospace;
-  font-size: 12px;
-  color: var(--text-secondary);
-  background: var(--bg-100);
-  padding: 8px 10px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border-default);
-}
-
-/* ========== Timeline ========== */
-.timeline {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
-.timelineItem {
-  display: flex;
-  gap: 16px;
-  padding: 16px 0;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
   border-bottom: 1px solid var(--border-default);
-  animation: slideUp 0.2s ease;
 }
 
-.timelineItem:last-child {
-  border-bottom: none;
-}
-
-.timelineDot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--text-muted);
-  margin-top: 6px;
-  flex-shrink: 0;
-}
-
-.timelineItem:first-child .timelineDot {
-  background: var(--text-primary);
-}
-
-.timelineContent {
-  flex: 1;
-  min-width: 0;
-}
-
-.timelineAction {
-  font-size: 13px;
-  font-weight: 500;
+.slideOverTitle {
+  font-size: 14px;
+  font-weight: 600;
   color: var(--text-primary);
-  margin-bottom: 4px;
 }
 
-.timelineDate {
-  font-size: 12px;
-  color: var(--text-tertiary);
-  margin-bottom: 8px;
-}
-
-.timelineMeta {
-  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Courier New', monospace;
-  font-size: 11px;
+.slideOverClose {
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
   color: var(--text-muted);
-  word-break: break-all;
+  transition: color 0.15s ease;
 }
 
-/* ========== Empty State ========== */
-.emptyState {
-  text-align: center;
-  padding: 32px 16px;
-  color: var(--text-muted);
+.slideOverClose:hover {
+  color: var(--text-primary);
 }
 
-.emptyState svg {
-  width: 32px;
-  height: 32px;
-  margin-bottom: 12px;
-  opacity: 0.5;
+.slideOverClose svg {
+  width: 20px;
+  height: 20px;
 }
 
-.emptyState p {
-  font-size: 13px;
+.slideOverContent {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.slideOverFooter {
+  padding: 16px 20px;
+  border-top: 1px solid var(--border-default);
 }
 
 /* ========== Toast ========== */
-.statusContainer {
+.toastContainer {
   position: fixed;
   bottom: 24px;
   right: 24px;
@@ -614,43 +765,24 @@
   font-size: 13px;
 }
 
-.toast.success {
-  border-color: rgba(34, 197, 94, 0.3);
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-.toast.success .toastIcon {
-  color: var(--accent-green);
-}
-
-.toast.error {
-  border-color: rgba(239, 68, 68, 0.3);
-}
-
-.toast.error .toastIcon {
-  color: var(--accent-red);
-}
-
-.toast.info {
-  border-color: var(--border-hover);
-}
-
-.toast.info .toastIcon {
-  color: var(--text-secondary);
-}
-
-.toast.warning {
-  border-color: rgba(234, 179, 8, 0.3);
-}
-
-.toast.warning .toastIcon {
-  color: var(--accent-yellow);
-}
+.toast.success { border-color: rgba(34, 197, 94, 0.4); }
+.toast.error { border-color: rgba(239, 68, 68, 0.4); }
+.toast.info { border-color: var(--border-hover); }
 
 .toastIcon {
   flex-shrink: 0;
   width: 16px;
   height: 16px;
 }
+
+.toast.success .toastIcon { color: var(--accent-green); }
+.toast.error .toastIcon { color: var(--accent-red); }
+.toast.info .toastIcon { color: var(--text-secondary); }
 
 .toastMessage {
   flex: 1;
@@ -663,8 +795,6 @@
   color: var(--text-muted);
   cursor: pointer;
   padding: 0;
-  display: flex;
-  transition: color 0.15s ease;
 }
 
 .toastClose:hover {
@@ -676,40 +806,42 @@
   height: 14px;
 }
 
+/* ========== Spinner ========== */
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid transparent;
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 /* ========== Responsive ========== */
-@media (max-width: 640px) {
-  .main {
-    padding: 0 16px 48px;
+@media (max-width: 768px) {
+  .dashboard {
+    flex-direction: column;
   }
 
-  .header {
-    margin-bottom: 32px;
+  .sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border-default);
   }
 
-  .hero h1 {
-    font-size: 24px;
-  }
-
-  .supplyChainFlow {
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
-  .flowArrow {
+  .sidebarContent {
     display: none;
   }
 
-  .tabs {
-    overflow-x: auto;
-    justify-content: flex-start;
-    padding-bottom: 0;
-    margin: 0 -16px 24px;
-    padding: 0 16px;
-  }
-
-  .statusContainer {
-    left: 16px;
-    right: 16px;
-    max-width: none;
+  .slideOver {
+    width: 100%;
   }
 }
