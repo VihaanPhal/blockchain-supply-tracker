@@ -1,293 +1,348 @@
-# blockchain-supply-tracker
+# Blockchain Supply Chain Tracker
 
-A lightweight, modular Solidity example that demonstrates a role-protected supply-chain registry. The project uses an ERC-721 token to represent physical products, an on-chain provenance log, and a small controller that wires the pieces together. The code is intended for learning, demos, and as a starting point for a more complete system.
-
----
-
-# Project layout
-
-```
-contracts/
-  ├─ AccessControlManager.sol     # role management (manufacturer / distributor / retailer / regulator)
-  ├─ ProductRegistry.sol          # ERC-721 product registry (ERC721URIStorage) with IPFS CID + status
-  ├─ ProvenanceTracker.sol        # per-token history events (who, action, ipfsCid, timestamp)
-  └─ SupplyChainController.sol    # convenience controller that coordinates registry + provenance
-scripts/
-  └─ deploy.js                    # deployment script (examples below)
-test/
-  └─ (Mocha/Chai tests)
-hardhat.config.js
-package.json
-README.md
-```
-
-All contracts use `pragma solidity ^0.8.19` and import OpenZeppelin contracts.
+A decentralized application (dApp) for tracking product provenance using Ethereum smart contracts. Products are tokenized as ERC-721 NFTs with role-based access control and immutable audit trails.
 
 ---
 
-# Goals
+## Prerequisites
 
-* Provide a minimal, modular architecture for tracking product provenance on-chain.
-* Demonstrate role-based access (AccessControl), a tokenized product registry (ERC-721), and an append-only provenance store.
-* Show how to wire contracts together cleanly so different developers can own separate modules.
+Before starting, ensure you have:
 
----
-
-# Prerequisites
-
-* Node.js 18+ (use [nvm](https://github.com/nvm-sh/nvm) for easy switching) and npm.
-* Git for cloning the repo and collaborating.
-* VS Code (recommended) with the Solidity and Hardhat extensions, or JetBrains Fleet/WebStorm if you prefer.
-* MetaMask browser extension for wallet/key management on Sepolia and localhost.
-* Optional: IPFS Desktop or a pinning service account (Pinata, web3.storage) for uploading manifests and documents.
+- **Node.js 18+** - Check with `node -v`
+- **MetaMask** browser extension - [Download here](https://metamask.io/download/)
 
 ---
 
-# Environment setup
-
-1. Install the tools above and ensure `node -v` reports 18.x or higher.
-2. Clone/open the repo and install dependencies:
-   ```bash
-   npm install
-   ```
-3. Copy `.env.example` to `.env`, then provide the Sepolia RPC URL, the deployer private key (without `0x`), and optionally an Etherscan key.
-4. Install the frontend dependencies:
-   ```bash
-   cd frontend
-   npm install
-   ```
-5. Duplicate `frontend/.env.local.example` into `frontend/.env.local` and paste the deployed contract addresses (either from `npm run deploy:local` or Sepolia).
-6. Launch VS Code in the repo (`code .`) and enable the Solidity extension so it picks up the Hardhat project automatically.
-7. Add a wallet (MetaMask is easiest) with some Sepolia ETH for live deployments. Use the same private key you placed in `.env`.
-
----
-
-# Useful npm scripts
-
-| Command | Description |
-| --- | --- |
-| `npm run compile` | Compile Solidity contracts with Hardhat. |
-| `npm run test` | Run the Mocha/Chai unit tests. |
-| `npm run node` | Start a local Hardhat JSON-RPC node. |
-| `npm run deploy:local` | Deploy all contracts to the local Hardhat node. |
-| `npm run deploy:sepolia` | Deploy to Sepolia using the credentials in `.env`. |
-
-If this is your first Hardhat run on a machine, macOS may prompt for access so Hardhat can create `~/Library/Preferences/hardhat-nodejs`.
-
----
-
-# Local development flow
-
-1. `npm run node` – spins up a local chain and prints funded accounts.
-2. In another terminal, `npm run deploy:local` – deploys contracts, grants the deployer/controller base roles, and prints addresses.
-3. Run `npm run test` anytime to execute the included end-to-end flow tests in `test/supply-chain-flow.js`.
-4. Upload product documents to IPFS (Desktop app or a pinning service) and store the returned CID via `registerProduct`.
-5. Use Hardhat tasks, scripts, or the console (`npx hardhat console --network localhost`) to mint tokens, update status, and append provenance events.
-
----
-
-# Deploying to Sepolia
-
-1. Get a Sepolia RPC endpoint (Infura/Alchemy/etc.) and some Sepolia ETH in the deployer wallet.
-2. Populate `.env`:
-   ```
-   SEPOLIA_RPC_URL=https://sepolia.infura.io/v3/<project-id>
-   SEPOLIA_PRIVATE_KEY=<hex-without-0x>
-   ETHERSCAN_API_KEY=<optional-for-verification>
-   ```
-3. `npm run deploy:sepolia` – the script deploys AccessControl → ProductRegistry → ProvenanceTracker → SupplyChainController, grants base roles to the deployer and controller, and prints contract addresses.
-4. (Optional) Verify on Etherscan with `npx hardhat verify --network sepolia <address> <constructor args>`.
-
----
-
-# Frontend dApp
-
-1. In `frontend/.env.local`, fill in:
-   ```
-   NEXT_PUBLIC_ACCESS_CONTROL_ADDRESS=<access control address>
-   NEXT_PUBLIC_PRODUCT_REGISTRY_ADDRESS=<product registry address>
-   NEXT_PUBLIC_PROVENANCE_TRACKER_ADDRESS=<provenance tracker address>
-   NEXT_PUBLIC_SUPPLY_CHAIN_CONTROLLER_ADDRESS=<controller address>
-   NEXT_PUBLIC_CHAIN_ID=11155111 # (use 31337 for local Hardhat)
-   ```
-2. Start the dev server:
-   ```bash
-   cd frontend
-   npm run dev
-   ```
-3. Visit `http://localhost:3000`, connect MetaMask (select the same chain as the backend), and use the forms to:
-   * Mint/register products
-   * Run the controller convenience flow
-   * Update product status
-   * Append provenance events
-   * Query ownership/status + view the on-chain history
-
-The UI uses `ethers.js` directly, so any updates to the ABIs require a fresh `npm run compile` (to regenerate artifacts) and a frontend restart.
-
----
-
-# Frontend & storage suggestions
-
-* Scaffold a Next.js dApp (`frontend/` already included) that consumes the artifacts and interacts through MetaMask.
-* Persist large documents off-chain on IPFS (Pinata/web3.storage/Infura) and store only the CID plus hashes on-chain.
-* For collaboration, schedule the weekly Google Meet syncs defined in the team contract and use GitHub Projects/Trello for task tracking.
-
----
-
-# Quick start — Hardhat (cross-platform)
-
-1. Clone or open the repo and change into the project directory.
+## Quick Start (TL;DR)
 
 ```bash
-git clone <repo-url>
+# Terminal 1: Start blockchain
 cd blockchain-supply-tracker
+npm install
+npm run compile
+npm run node
+
+# Terminal 2: Deploy contracts
+npm run deploy:local
+
+# Terminal 3: Start frontend
+cd frontend
+npm install
+npm run dev
 ```
 
-2. Initialize the project and install dev dependencies:
+Then configure MetaMask (see Step 6 below) and open http://localhost:3000
+
+---
+
+## Step-by-Step Setup Guide
+
+### Step 1: Install Backend Dependencies
+
+Open a terminal and navigate to the project folder:
 
 ```bash
-npm init -y
-npm install --save-dev hardhat @nomicfoundation/hardhat-toolbox
-npm install @openzeppelin/contracts
+cd "/Users/vihaanphal/Desktop/Blockchain app/blockchain-supply-tracker"
+npm install
 ```
 
-3. Create a minimal `hardhat.config.js` (project root) — set the Solidity compiler to 0.8.19:
+This installs Hardhat, OpenZeppelin contracts, and other dependencies.
 
-```js
-require("@nomicfoundation/hardhat-toolbox");
+---
 
-module.exports = {
-  solidity: "0.8.19",
-};
-```
-
-4. Compile:
+### Step 2: Compile Smart Contracts
 
 ```bash
-npx hardhat compile
+npm run compile
 ```
 
-If compilation succeeds, artifacts will appear in `artifacts/`.
+You should see: `Compiled 21 Solidity files successfully`
 
 ---
 
-# Deploy locally (example)
+### Step 3: Run Tests (Optional)
 
-Start a local Hardhat node:
+Verify everything works:
 
 ```bash
-npx hardhat node
+npm run test
 ```
 
-Deploy the contracts to the local network (new terminal):
+All 3 tests should pass.
+
+---
+
+### Step 4: Start the Local Blockchain
 
 ```bash
-npx hardhat run --network localhost scripts/deploy.js
+npm run node
+```
+
+**Keep this terminal running!** It will display:
+- Server running at `http://127.0.0.1:8545`
+- 20 test accounts, each with 10,000 ETH
+
+**Important:** Save Account #0's private key for MetaMask:
+```
+0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
 ```
 
 ---
 
-# Example `scripts/deploy.js`
+### Step 5: Deploy Contracts
 
-Place this in `scripts/deploy.js`. It deploys contracts in the correct order and prints addresses.
+Open a **new terminal** (keep the blockchain running):
 
-```js
-// scripts/deploy.js
-async function main() {
-  const [deployer] = await ethers.getSigners();
-  console.log("Deploying contracts with account:", deployer.address);
+```bash
+cd "/Users/vihaanphal/Desktop/Blockchain app/blockchain-supply-tracker"
+npm run deploy:local
+```
 
-  // 1) AccessControlManager
-  const AccessControlManager = await ethers.getContractFactory("AccessControlManager");
-  const access = await AccessControlManager.deploy(deployer.address);
-  await access.deployed();
-  console.log("AccessControlManager:", access.address);
+You'll see output like:
+```
+Deploying contracts with account: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+AccessControlManager: 0x5FbDB2315678afecb367f032d93F642f64180aa3
+ProductRegistry: 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
+ProvenanceTracker: 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
+SupplyChainController: 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9
+```
 
-  // 2) ProductRegistry (pass access control address)
-  const ProductRegistry = await ethers.getContractFactory("ProductRegistry");
-  const registry = await ProductRegistry.deploy(access.address);
-  await registry.deployed();
-  console.log("ProductRegistry:", registry.address);
+**Save these addresses!** You'll need them for the frontend.
 
-  // 3) ProvenanceTracker (pass access control address)
-  const ProvenanceTracker = await ethers.getContractFactory("ProvenanceTracker");
-  const provenance = await ProvenanceTracker.deploy(access.address);
-  await provenance.deployed();
-  console.log("ProvenanceTracker:", provenance.address);
+---
 
-  // 4) (optional) SupplyChainController (pass addresses)
-  const SupplyChainController = await ethers.getContractFactory("SupplyChainController");
-  const controller = await SupplyChainController.deploy(access.address, registry.address, provenance.address);
-  await controller.deployed();
-  console.log("SupplyChainController:", controller.address);
-}
+### Step 6: Configure MetaMask (Test Wallet Setup)
 
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+#### 6.1 Add Hardhat Network to MetaMask
+
+1. Open MetaMask in your browser
+2. Click the network dropdown (top left, usually says "Ethereum Mainnet")
+3. Click **"Add network"** > **"Add a network manually"**
+4. Enter these details:
+
+| Field | Value |
+|-------|-------|
+| Network Name | `Hardhat Local` |
+| New RPC URL | `http://127.0.0.1:8545` |
+| Chain ID | `31337` |
+| Currency Symbol | `ETH` |
+| Block Explorer URL | *(leave empty)* |
+
+5. Click **Save**
+
+#### 6.2 Import Test Account (with 10,000 ETH)
+
+1. In MetaMask, click the account icon (top right)
+2. Click **"Add account or hardware wallet"**
+3. Select **"Import account"**
+4. Paste this private key:
+
+```
+0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+```
+
+5. Click **Import**
+
+You now have a test wallet with 10,000 ETH!
+
+#### 6.3 Switch to Hardhat Network
+
+Make sure MetaMask is connected to "Hardhat Local" network (not Ethereum Mainnet).
+
+---
+
+### Step 7: Configure Frontend Environment
+
+Create the environment file for the frontend:
+
+```bash
+cd frontend
+```
+
+Create a file named `.env.local` with this content:
+
+```env
+NEXT_PUBLIC_ACCESS_CONTROL_ADDRESS=0x5FbDB2315678afecb367f032d93F642f64180aa3
+NEXT_PUBLIC_PRODUCT_REGISTRY_ADDRESS=0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
+NEXT_PUBLIC_PROVENANCE_TRACKER_ADDRESS=0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
+NEXT_PUBLIC_SUPPLY_CHAIN_CONTROLLER_ADDRESS=0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9
+NEXT_PUBLIC_CHAIN_ID=31337
+```
+
+**Note:** If your contract addresses are different (from Step 5), use those instead.
+
+---
+
+### Step 8: Install Frontend Dependencies
+
+```bash
+cd frontend
+npm install
 ```
 
 ---
 
-# Typical development flow
+### Step 9: Start the Frontend
 
-* Deploy `AccessControlManager` first — it is the canonical source of role data.
-* Deploy `ProductRegistry` and `ProvenanceTracker` next, each receiving the `AccessControlManager` address in their constructor.
-* Optionally deploy `SupplyChainController` which orchestrates registry + provenance in a single call for convenient frontend integration.
-* Use the admin account (the address passed to `AccessControlManager` during deployment) to grant manufacturer/distributor/retailer/regulator roles.
+```bash
+npm run dev
+```
 
----
-
-# Testing suggestions
-
-Create simple Mocha/Chai tests that cover:
-
-* Role assignment: admin grants/revokes roles.
-* Mint flow: manufacturer registers a product (token minted, tokenURI and ipfsCid set).
-* Provenance logging: adding and reading history events.
-* Transfer flow: owner transfers token, provenance records a transfer.
-* Access control: ensure unauthorized callers are rejected.
-
-Example test path: `test/product-registration.js`.
+You should see:
+```
+▲ Next.js 16.0.3
+- Local: http://localhost:3000
+```
 
 ---
 
-# Notes / troubleshooting
+### Step 10: Use the Application
 
-* If compilation fails with missing OpenZeppelin imports, ensure `@openzeppelin/contracts` is installed and `node_modules` is in the project root.
-* Ensure `hardhat.config.js` solidity version satisfies `^0.8.19`.
-* Contract addresses and ABI files are available in `artifacts/` after successful compilation.
-* For quick experiments, paste contracts into Remix and use the Solidity compiler version `0.8.19`.
+1. Open http://localhost:3000 in your browser
+2. Click **"Connect Wallet"**
+3. MetaMask will pop up - click **Connect**
+4. You're ready to use the app!
 
----
-
-# Design notes
-
-* The project uses a modular pattern: `AccessControlManager` is the single source of truth for roles; `ProductRegistry` owns tokens and metadata; `ProvenanceTracker` stores the history; `SupplyChainController` glues them together. This separation helps parallel development and simplifies audits.
-* IPFS CIDs are stored as strings on-chain and used as an integrity anchor for off-chain documents (manifests, certificates). For private documents, encrypt before uploading to IPFS and store the encrypted CID on-chain.
-* Recording every small event on-chain is auditable but can be costly. Consider batching or anchoring off-chain logs (Merkle roots) for high-volume production systems.
+**Available Features:**
+- Register new products (mint NFTs)
+- Update product status (RAW → PACKED → IN_TRANSIT → DELIVERED)
+- View product information
+- View provenance history (immutable audit trail)
 
 ---
 
-# Alternatives & next steps
+## Restarting the App (After Closing)
 
-* If the team prefers not to mint ERC-721 tokens, replace `ProductRegistry` with a numeric ID registry and keep `ProvenanceTracker` unchanged.
-* Add an indexer (The Graph) or off-chain listener to index events for an easy frontend UI.
-* Add unit & integration tests and a CI action that runs `npx hardhat compile` and tests on push.
+Every time you want to run the app again:
+
+### Terminal 1: Start Blockchain
+```bash
+cd "/Users/vihaanphal/Desktop/Blockchain app/blockchain-supply-tracker"
+npm run node
+```
+
+### Terminal 2: Deploy Contracts
+```bash
+cd "/Users/vihaanphal/Desktop/Blockchain app/blockchain-supply-tracker"
+npm run deploy:local
+```
+
+**Important:** Update `frontend/.env.local` if contract addresses changed.
+
+### Terminal 3: Start Frontend
+```bash
+cd "/Users/vihaanphal/Desktop/Blockchain app/blockchain-supply-tracker/frontend"
+npm run dev
+```
+
+### MetaMask
+1. Make sure you're on "Hardhat Local" network
+2. If you see "nonce" errors, reset your account:
+   - MetaMask > Settings > Advanced > Clear activity tab data
 
 ---
 
-# License
+## Test Accounts (All Have 10,000 ETH)
 
-Contracts include an SPDX header `MIT`. Add a `LICENSE` file in the repo root if you want a project-level license file.
+| Account | Address | Private Key |
+|---------|---------|-------------|
+| #0 (Admin) | `0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266` | `0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80` |
+| #1 | `0x70997970C51812dc3A010C7d01b50e0d17dc79C8` | `0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d` |
+| #2 | `0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC` | `0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a` |
+| #3 | `0x90F79bf6EB2c4f870365E785982E1f101E93b906` | `0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6` |
+| #4 | `0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65` | `0x47e179ec197488593b187f80a00eb0da91f1b9d0b13f8733639f19c30a34926a` |
+
+**Warning:** These are PUBLIC test keys. Never send real ETH to these addresses!
 
 ---
 
-# Contact / contribution
+## Available Commands
 
-Open a PR with feature changes or bugfixes. Use the issue tracker to report bugs or request features.
+### Backend (Smart Contracts)
+```bash
+npm run compile      # Compile Solidity contracts
+npm run test         # Run unit tests
+npm run node         # Start local blockchain
+npm run deploy:local # Deploy to local blockchain
+npm run clean        # Clean build artifacts
+```
+
+### Frontend
+```bash
+cd frontend
+npm run dev          # Start dev server (http://localhost:3000)
+npm run build        # Build for production
+npm run start        # Start production server
+```
 
 ---
-=======
-# blockchain-supply-tracker
+
+## Troubleshooting
+
+### "Nonce too high" error in MetaMask
+1. Go to MetaMask > Settings > Advanced
+2. Click "Clear activity tab data"
+3. Try the transaction again
+
+### "Could not connect to network"
+- Make sure `npm run node` is running in a terminal
+- Check MetaMask is set to "Hardhat Local" network
+- Verify RPC URL is `http://127.0.0.1:8545`
+
+### Contract addresses don't match
+- Restart the blockchain: stop `npm run node` and start it again
+- Redeploy: run `npm run deploy:local`
+- Update `frontend/.env.local` with new addresses
+- Restart frontend: stop and run `npm run dev` again
+
+### "User rejected the request"
+- Make sure to click "Confirm" in MetaMask when prompted
+
+### Frontend shows wrong data
+- Clear browser cache or open in incognito mode
+- Reset MetaMask activity data (see above)
+
+---
+
+## Project Structure
+
+```
+blockchain-supply-tracker/
+├── contracts/                    # Solidity smart contracts
+│   ├── AccessControlManager.sol  # Role management
+│   ├── ProductRegistry.sol       # ERC-721 product tokens
+│   ├── ProvenanceTracker.sol     # Audit trail history
+│   └── SupplyChainController.sol # Orchestration layer
+├── scripts/
+│   └── deploy.js                 # Deployment script
+├── test/
+│   └── supply-chain-flow.js      # Unit tests
+├── frontend/                     # Next.js web application
+│   ├── src/app/
+│   │   └── page.js               # Main dApp interface
+│   ├── .env.local                # Contract addresses (create this)
+│   └── package.json
+├── hardhat.config.js             # Hardhat configuration
+├── package.json                  # Backend dependencies
+└── README.md                     # This file
+```
+
+---
+
+## Smart Contract Roles
+
+| Role | Can Do |
+|------|--------|
+| **Admin** | Grant/revoke all roles |
+| **Manufacturer** | Register new products |
+| **Distributor** | Update status, transfer products |
+| **Retailer** | Update status, transfer products |
+| **Regulator** | View all data (read-only access) |
+
+The deployer account (#0) is automatically granted admin + manufacturer roles.
+
+---
+
+## License
+
+MIT
