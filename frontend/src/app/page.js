@@ -34,6 +34,12 @@ const expectedChainId = Number(process.env.NEXT_PUBLIC_CHAIN_ID ?? 31337);
 
 const STORAGE_KEY = 'supply-chain-tokens';
 
+// ========== Helper Functions ==========
+const generateCID = (name) => {
+  const hash = btoa(name + Date.now()).replace(/[^a-zA-Z0-9]/g, '').slice(0, 32);
+  return `bafy${hash}`;
+};
+
 // ========== Icons ==========
 const Icons = {
   Cube: () => (
@@ -148,10 +154,19 @@ function NewProductSlideOver({ isOpen, onClose, account, onMint, loading }) {
     e.preventDefault();
     const form = formRef.current;
     const data = new FormData(form);
+    const name = data.get("productName");
+    const description = data.get("description") || "";
+
+    // Generate CID and Token URI from product name
+    const cid = generateCID(name);
+    const tokenURI = `ipfs://${cid}`;
+
     const success = await onMint({
       to: data.get("to"),
-      cid: data.get("cid"),
-      tokenURI: data.get("tokenURI"),
+      name,
+      description,
+      cid,
+      tokenURI,
       initialStatus: data.get("initialStatus")
     });
     if (success) {
@@ -174,16 +189,12 @@ function NewProductSlideOver({ isOpen, onClose, account, onMint, loading }) {
         </div>
         <form ref={formRef} onSubmit={handleSubmit} className={styles.slideOverContent}>
           <div className={styles.formGroup}>
-            <label className={styles.label}>Recipient Address</label>
-            <input className={styles.input} name="to" placeholder="0x..." defaultValue={account} required />
+            <label className={styles.label}>Product Name</label>
+            <input className={styles.input} name="productName" placeholder="e.g., iPhone 15 Pro" required />
           </div>
           <div className={styles.formGroup}>
-            <label className={styles.label}>IPFS CID</label>
-            <input className={styles.input} name="cid" placeholder="bafy..." required />
-          </div>
-          <div className={styles.formGroup}>
-            <label className={styles.label}>Token URI</label>
-            <input className={styles.input} name="tokenURI" placeholder="ipfs://..." required />
+            <label className={styles.label}>Description (optional)</label>
+            <input className={styles.input} name="description" placeholder="e.g., 256GB Space Black" />
           </div>
           <div className={styles.formGroup}>
             <label className={styles.label}>Initial Status</label>
@@ -193,6 +204,10 @@ function NewProductSlideOver({ isOpen, onClose, account, onMint, loading }) {
               <option value="IN_TRANSIT">IN_TRANSIT</option>
               <option value="DELIVERED">DELIVERED</option>
             </select>
+          </div>
+          <div className={styles.formGroup}>
+            <label className={styles.label}>Recipient Address</label>
+            <input className={styles.input} name="to" placeholder="0x..." defaultValue={account} required />
           </div>
           <div className={styles.slideOverFooter} style={{ padding: 0, border: 'none', marginTop: 24 }}>
             <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`} disabled={loading}>
@@ -310,7 +325,7 @@ export default function Home() {
     return null;
   };
 
-  const handleMint = async ({ to, cid, tokenURI, initialStatus }) => {
+  const handleMint = async ({ to, name, description, cid, tokenURI, initialStatus }) => {
     try {
       setLoading(prev => ({ ...prev, mint: true }));
       const registry = getRegistry();
@@ -322,12 +337,15 @@ export default function Home() {
       if (tokenId) {
         const newToken = {
           id: tokenId,
+          name,
+          description,
+          cid,
           status: initialStatus,
           createdAt: Date.now()
         };
         setTokens(prev => [newToken, ...prev]);
         setSelectedTokenId(tokenId);
-        addToast(`Minted Token #${tokenId}`, 'success');
+        addToast(`Minted "${name}" · CID: ${cid.slice(0, 20)}...`, 'success');
         return true;
       }
       return false;
@@ -433,6 +451,7 @@ export default function Home() {
   };
 
   const currentStep = tokenData ? getStatusStep(tokenData.status) : 0;
+  const selectedToken = tokens.find(t => t.id === selectedTokenId);
 
   return (
     <div className={styles.dashboard}>
@@ -475,7 +494,7 @@ export default function Home() {
                     className={`${styles.tokenItem} ${selectedTokenId === token.id ? styles.active : ''}`}
                     onClick={() => setSelectedTokenId(token.id)}
                   >
-                    <span className={styles.tokenId}>Token #{token.id}</span>
+                    <span className={styles.tokenId}>{token.name || `Token #${token.id}`}</span>
                     <span className={styles.tokenMeta}>
                       <StatusBadge status={token.status} small />
                     </span>
@@ -508,7 +527,7 @@ export default function Home() {
       <main className={styles.main}>
         <div className={styles.mainHeader}>
           <h1 className={styles.mainTitle}>
-            {selectedTokenId ? `Token #${selectedTokenId}` : 'Dashboard'}
+            {selectedToken ? (selectedToken.name || `Token #${selectedTokenId}`) : 'Dashboard'}
           </h1>
         </div>
 
@@ -539,10 +558,24 @@ export default function Home() {
               <div className={styles.tokenHeader}>
                 <div className={styles.tokenHeaderInfo}>
                   <h2 className={styles.tokenHeaderId}>
-                    Token #{selectedTokenId}
+                    {selectedToken?.name || `Token #${selectedTokenId}`}
                     <StatusBadge status={tokenData.status} />
                   </h2>
                   <div className={styles.tokenHeaderMeta}>
+                    <div className={styles.tokenMetaItem}>
+                      <span className={styles.tokenMetaLabel}>Token ID</span>
+                      <span className={`${styles.tokenMetaValue} ${styles.mono}`}>
+                        #{selectedTokenId}
+                      </span>
+                    </div>
+                    {selectedToken?.description && (
+                      <div className={styles.tokenMetaItem}>
+                        <span className={styles.tokenMetaLabel}>Description</span>
+                        <span className={styles.tokenMetaValue}>
+                          {selectedToken.description}
+                        </span>
+                      </div>
+                    )}
                     <div className={styles.tokenMetaItem}>
                       <span className={styles.tokenMetaLabel}>Owner</span>
                       <span className={`${styles.tokenMetaValue} ${styles.mono}`}>
@@ -551,8 +584,8 @@ export default function Home() {
                     </div>
                     <div className={styles.tokenMetaItem}>
                       <span className={styles.tokenMetaLabel}>IPFS CID</span>
-                      <span className={styles.tokenMetaValue}>
-                        {tokenData.cid.slice(0, 16)}...
+                      <span className={`${styles.tokenMetaValue} ${styles.mono}`}>
+                        {selectedToken?.cid || tokenData.cid.slice(0, 20)}...
                       </span>
                     </div>
                   </div>
